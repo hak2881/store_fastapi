@@ -63,7 +63,7 @@ async def get_all_users(
         admin_user: dict = Depends(get_current_admin), db: AsyncSession = Depends(get_db)
 ):
     results = await db.execute(select(User).options(selectinload(User.orders)))
-    users = results.scalars().all(),
+    users = results.scalars().all()
 
     return users
 

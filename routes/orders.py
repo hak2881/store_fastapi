@@ -52,13 +52,20 @@ async def create_order(
     # new_order.products.extend(products)
     # await db.commit()
     # await db.refresh(new_order)
-    db.add(new_order)
+
+    db.add(new_order) # sqlite한정 flush가 일어나서 그냥 바로 추가하면됨..
     await db.commit()
     await db.refresh(new_order)
 
+    result = await db.execute(
+        select(Order)
+        .options(selectinload(Order.products))
+        .where(Order.order_id == new_order.order_id)
+    )
+    new_order = result.scalars().first()
     return new_order
 
-    return new_order
+
 
 
 @orders_router.get(
@@ -70,7 +77,8 @@ async def create_order(
         "created_at"
     }
 )
-async def current_user_orders(db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
+async def current_user_orders(
+    db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
     orders = await db.execute(
         select(Order)
         .options(selectinload(Order.products))
@@ -82,9 +90,9 @@ async def current_user_orders(db: AsyncSession = Depends(get_db), user: dict = D
         {
             "username": order.username,
             "total_price": order.total_price,
-            "is_paid": order.is_paid,
-            "created_at": order.created_at,
-            "product_id": [product.product_id for product in order.products]
+            "is_paid": "Yes" if order.is_paid else "No",
+            "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "products": [product.product_id for product in order.products]
         }
         for order in orders
     ]
